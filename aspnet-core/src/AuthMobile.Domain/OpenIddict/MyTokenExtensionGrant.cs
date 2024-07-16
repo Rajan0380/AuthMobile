@@ -21,6 +21,7 @@ using Volo.Abp.PermissionManagement;
 using Volo.Abp.Domain.Repositories;
 using System.Security.Claims;
 using static Volo.Abp.Identity.Settings.IdentitySettingNames;
+using Volo.Abp.Security.Claims;
 
 namespace Demo.Auth.OpenIddict
 {
@@ -38,38 +39,56 @@ namespace Demo.Auth.OpenIddict
 
         public async Task<IActionResult> HandleAsync(ExtensionGrantContext context)
         {
-            
            
             var IdentityUserManager = context.HttpContext.RequestServices.GetRequiredService<IdentityUserManager>();
             var signInManager = context.HttpContext.RequestServices.GetRequiredService<SignInManager<Volo.Abp.Identity.IdentityUser>>();
-            var uniquePhoneNumberIdentityUserRepository = context.HttpContext.RequestServices
-                .GetRequiredService<IUniquePhoneNumberIdentityUserRepository>();
             var scopeManager = context.HttpContext.RequestServices.GetRequiredService<IOpenIddictScopeManager>();
             var abpOpenIddictClaimsPrincipalManager = context.HttpContext.RequestServices
               .GetRequiredService<AbpOpenIddictClaimsPrincipalManager>();
-            var phoneNumber = context.Request.GetParameter("phone_number")?.ToString();
-            var identityUser =
-               await uniquePhoneNumberIdentityUserRepository.GetByConfirmedPhoneNumberAsync(phoneNumber);
-            var principal = await signInManager.CreateUserPrincipalAsync(identityUser);
-            // Fetch permissions specific to the user
-            var userId = identityUser.Id.ToString();
-            var roles = await IdentityUserManager.GetRolesAsync(identityUser);
+            var identitySecurityLogManager = context.HttpContext.RequestServices.GetRequiredService<IdentitySecurityLogManager>();
+
+            // get phone number from request
+            var phoneNumber = context.Request.GetParameter("phone_number")?.Value?.ToString();
+            if (string.IsNullOrEmpty(phoneNumber))
+            {
+                return new ForbidResult(new[] { OpenIddictServerAspNetCoreDefaults.AuthenticationScheme },
+                                        properties: new AuthenticationProperties(new Dictionary<string, string>
+                                        {
+                                            [OpenIddictServerAspNetCoreConstants.Properties.Error] =
+                                                OpenIddictConstants.Errors.InvalidGrant
+                                        }!));
+            }
+
+            // retrieve user
+            var userRepository = context.HttpContext.RequestServices.GetRequiredService<IRepository<Volo.Abp.Identity.IdentityUser, Guid>>();
+            var user = await userRepository.FirstOrDefaultAsync(x => x.PhoneNumber == phoneNumber);
+            if (user == null)
+            {
+                return new ForbidResult(new[] { OpenIddictServerAspNetCoreDefaults.AuthenticationScheme },
+                                        properties: new AuthenticationProperties(new Dictionary<string, string>
+                                        {
+                                            [OpenIddictServerAspNetCoreConstants.Properties.Error] = OpenIddictConstants.Errors.InvalidGrant
+                                        }!));
+            }
+
+            var principal = await signInManager.CreateUserPrincipalAsync(user);
+
+            //Get Roles for user and add claim
+            var roles = await IdentityUserManager.GetRolesAsync(user);
             principal.AddClaim("role", string.Join(",", roles));
             
             principal.SetScopes(context.Request.GetScopes());
             principal.SetResources(await GetResourcesAsync(context.Request.GetScopes(), scopeManager));
-
             await abpOpenIddictClaimsPrincipalManager.HandleAsync(context.Request, principal);
-
-            //await identitySecurityLogManager.SaveAsync(
-            //    new IdentitySecurityLogContext
-            //    {
-            //        Identity = OpenIddictSecurityLogIdentityConsts.OpenIddict,
-            //        Action = OpenIddictSecurityLogActionConsts.LoginSucceeded,
-            //        UserName = context.Request.Username,
-            //        ClientId = context.Request.ClientId
-            //    }
-            //);
+            await identitySecurityLogManager.SaveAsync(
+                new IdentitySecurityLogContext
+                {
+                    Identity = OpenIddictSecurityLogIdentityConsts.OpenIddict,
+                    Action = OpenIddictSecurityLogActionConsts.LoginSucceeded,
+                    UserName = context.Request.Username,
+                    ClientId = context.Request.ClientId
+                }
+            );
 
             return new Microsoft.AspNetCore.Mvc.SignInResult(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
                 principal);
