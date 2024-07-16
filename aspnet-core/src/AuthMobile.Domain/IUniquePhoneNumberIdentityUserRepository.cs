@@ -10,6 +10,7 @@ using Volo.Abp.Identity;
 
 namespace AuthMobile
 {
+    // Newly Added IUniquePhoneNumberIdentityUserRepository
     public interface IUniquePhoneNumberIdentityUserRepository : IRepository<IdentityUser, Guid>, IIdentityUserRepository
     {
         Task<IdentityUser> FindByConfirmedPhoneNumberAsync([NotNull] string phoneNumber, bool includeDetails = true, CancellationToken cancellationToken = default);

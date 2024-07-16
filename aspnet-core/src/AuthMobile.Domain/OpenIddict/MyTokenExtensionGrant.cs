@@ -24,6 +24,7 @@ using static Volo.Abp.Identity.Settings.IdentitySettingNames;
 
 namespace Demo.Auth.OpenIddict
 {
+    //Newly Added TokenExtensionGrant
     public class MyTokenExtensionGrant : ITokenExtensionGrant
     {
         public const string ExtensionGrantName = "MyTokenExtensionGrant";

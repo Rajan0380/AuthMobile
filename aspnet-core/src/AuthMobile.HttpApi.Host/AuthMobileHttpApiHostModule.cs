@@ -77,7 +77,7 @@ public class AuthMobileHttpApiHostModule : AbpModule
                 options.UseAspNetCore();
             });
         });
-        //...
+        // Configuration for MyTokenExtensionGrant
         PreConfigure<OpenIddictServerBuilder>(builder =>
         {
             builder.Configure(openIddictServerOptions =>
@@ -118,7 +118,7 @@ public class AuthMobileHttpApiHostModule : AbpModule
                 options.DisableTransportSecurityRequirement = true;
             });
         }
-        //...
+        //  Configuration for MyTokenExtensionGrant
         Configure<AbpOpenIddictExtensionGrantsOptions>(options =>
         {
             options.Grants.Add(MyTokenExtensionGrant.ExtensionGrantName, new MyTokenExtensionGrant());

@@ -13,6 +13,7 @@ using Volo.Abp.Identity.EntityFrameworkCore;
 
 namespace Demo.Auth
 {
+    //Newly Added UniquePhoneNumberIdentityUserRepository
     public class UniquePhoneNumberIdentityUserRepository : EfCoreIdentityUserRepository,
         IUniquePhoneNumberIdentityUserRepository
     {
