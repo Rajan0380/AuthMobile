@@ -106,6 +106,11 @@ public class AuthMobileHttpApiHostModule : AbpModule
         var configuration = context.Services.GetConfiguration();
         var hostingEnvironment = context.Services.GetHostingEnvironment();
 
+
+        Configure<AuthMobileOptions>(
+            configuration.GetSection("AuthMobileOptions")
+        );
+
         if (!configuration.GetValue<bool>("App:DisablePII"))
         {
             Microsoft.IdentityModel.Logging.IdentityModelEventSource.ShowPII = true;
